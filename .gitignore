@@ -1,0 +1,19 @@
+# Python Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Local Databases & Vector Stores
+my_local_knowledge_base/
+*.sqlite3
+
+# Document / PDF Exclusions (Don't commit personal test files)
+*.pdf
+*.docx
+
+# System / OS
+.DS_Store
+Thumbs.db
+.env
