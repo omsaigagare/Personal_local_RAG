@@ -63,16 +63,26 @@ def retrieve_context_from_db(vector_db, query: str, top_k: int = 5, threshold: f
     return "\n\n".join(valid_chunks)
 
 
-def generate_rag_response(query: str, retrieved_chunks: str) -> str:
+def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list = None) -> str:
     if "No relevant context chunks found" in retrieved_chunks or "⚠️ No active document" in retrieved_chunks:
         return f"⚠️ **Grounded Analytics Aborted:** {retrieved_chunks}"
 
     local_llm = OllamaLLM(model=LLM_MODEL_NAME)
 
+    # Format the last 4 messages of conversation history to prevent context window overflow
+    history_str = "No previous conversation history."
+    if chat_history and len(chat_history) > 0:
+        recent_history = chat_history[-4:] 
+        history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in recent_history])
+
     system_rules = (
-        "You are an expert resume evaluator. Analyze the provided context and answer the user's question based STRICTLY and EXCLUSIVELY on the provided data.\n"
-        "1. Do not invent or assume facts.\n"
-        "2. If a detail (like candidate name or college) is absent from the text, state that it is not present in the document.\n\n"
+       "You are an expert analytical resume evaluator. Your job is to analyze the provided context, synthesize patterns, and form evaluations.\n\n"
+        "1. FACTUAL BOUNDARY (NO INVENTION): You are strictly forbidden from inventing facts, credentials, metrics, or experiences not explicitly written in the context. If a fact is absent, reply: 'This detail is not present in the provided document.'\n"
+        "2. ANALYTICAL PERMISSION: You ARE expected to evaluate candidate strengths, identify resume weaknesses, and assess job readiness. When evaluating readiness, apply logical deduction to the provided skills without fabricating additional qualifications.\n"
+        "3. EVIDENCE-FIRST REASONING: For any critique or evaluation, you must first output a bulleted list of the exact quotes/facts from the text that serve as your evidence, followed by your analytical conclusion.\n"
+        "4. MISSING METRICS: If asked to evaluate an attribute (e.g., 'leadership', 'scalability') with zero supporting evidence in the text, state clearly: 'The document contains no evidence to evaluate [attribute].'\n"
+        "5. CONVERSATIONAL CONTINUITY: Use the Conversation History below to resolve pronoun references (like 'he', 'that project', or 'the college') and understand follow-up queries.\n\n"
+        "Conversation History:\n{history}\n\n"
         "Context Evidence:\n{context}"
     )
 
@@ -82,4 +92,4 @@ def generate_rag_response(query: str, retrieved_chunks: str) -> str:
     ])
 
     chain = prompt_template | local_llm
-    return chain.invoke({"context": retrieved_chunks, "input": query})
+    return chain.invoke({"context": retrieved_chunks, "history": history_str, "input": query})
