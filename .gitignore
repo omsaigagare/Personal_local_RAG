@@ -17,3 +17,4 @@ my_local_knowledge_base/
 .DS_Store
 Thumbs.db
 .env
+.streamlit/secrets.toml

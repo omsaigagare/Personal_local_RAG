@@ -3,13 +3,14 @@ import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaLLM
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
-LLM_MODEL_NAME = "llama3.2"
+LLM_MODEL_NAME = "gemini-1.5-flash"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 
 def create_in_memory_vector_db(file_path: str):
@@ -67,7 +68,8 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
     if "No relevant context chunks found" in retrieved_chunks or "⚠️ No active document" in retrieved_chunks:
         return f"⚠️ **Grounded Analytics Aborted:** {retrieved_chunks}"
 
-    local_llm = OllamaLLM(model=LLM_MODEL_NAME)
+    # Initialize Gemini model (temperature set low for accurate factual retrieval)
+    llm = ChatGoogleGenerativeAI(model=LLM_MODEL_NAME, temperature=0.2)
 
     # Format the last 4 messages of conversation history to prevent context window overflow
     history_str = "No previous conversation history."
@@ -76,12 +78,11 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
         history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in recent_history])
 
     system_rules = (
-       "You are an expert analytical resume evaluator. Your job is to analyze the provided context, synthesize patterns, and form evaluations.\n\n"
-        "1. FACTUAL BOUNDARY (NO INVENTION): You are strictly forbidden from inventing facts, credentials, metrics, or experiences not explicitly written in the context. If a fact is absent, reply: 'This detail is not present in the provided document.'\n"
-        "2. ANALYTICAL PERMISSION: You ARE expected to evaluate candidate strengths, identify resume weaknesses, and assess job readiness. When evaluating readiness, apply logical deduction to the provided skills without fabricating additional qualifications.\n"
+       "You are an expert analytical document evaluator. Your job is to analyze the provided context, synthesize patterns, and form evaluations.\n\n"
+        "1. FACTUAL BOUNDARY (NO INVENTION): You are strictly forbidden from inventing facts, metrics, or details not explicitly written in the context. If a fact is absent, reply: 'This detail is not present in the provided document.'\n"
+        "2. ANALYTICAL PERMISSION: You ARE expected to evaluate core arguments, identify document weaknesses, and assess structural completeness. Apply logical deduction to the provided text without fabricating additional information.\n"
         "3. EVIDENCE-FIRST REASONING: For any critique or evaluation, you must first output a bulleted list of the exact quotes/facts from the text that serve as your evidence, followed by your analytical conclusion.\n"
-        "4. MISSING METRICS: If asked to evaluate an attribute (e.g., 'leadership', 'scalability') with zero supporting evidence in the text, state clearly: 'The document contains no evidence to evaluate [attribute].'\n"
-        "5. CONVERSATIONAL CONTINUITY: Use the Conversation History below to resolve pronoun references (like 'he', 'that project', or 'the college') and understand follow-up queries.\n\n"
+        "4. MISSING DATA: If asked to evaluate a topic with zero supporting evidence in the text, state clearly: 'The document contains no evidence to evaluate [topic].'\n"
         "Conversation History:\n{history}\n\n"
         "Context Evidence:\n{context}"
     )
@@ -91,5 +92,6 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
         ("human", "{input}")
     ])
 
-    chain = prompt_template | local_llm
+    # Chain now includes StrOutputParser to return raw text string instead of AIMessage object
+    chain = prompt_template | llm | StrOutputParser()
     return chain.invoke({"context": retrieved_chunks, "history": history_str, "input": query})

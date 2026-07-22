@@ -3,15 +3,28 @@ import tempfile
 import streamlit as st
 from backend import create_in_memory_vector_db, retrieve_context_from_db, generate_rag_response
 
-st.set_page_config(page_title="personal RAG bassed Assistent ", layout="wide")
-st.title("📚 local RAG-bassed personal assistent ")
+st.set_page_config(page_title="RAG Document Assistant", layout="wide")
+st.title("📚 Local RAG Document Assistant")
+
+# ==========================================
+# CREDENTIAL VALIDATION
+# ==========================================
+# Verify API Key availability before proceeding
+api_key_set = False
+if "GOOGLE_API_KEY" in os.environ:
+    api_key_set = True
+elif hasattr(st, "secrets") and "GOOGLE_API_KEY" in st.secrets:
+    api_key_set = True
 
 # ==========================================
 # SIDEBAR
 # ==========================================
 with st.sidebar:
     st.header("📂 Document Ingestion")
-    uploaded_file = st.file_uploader("Upload document(PDF)", type=["pdf"])
+    uploaded_file = st.file_uploader("Upload document (PDF)", type=["pdf"])
+
+    if not api_key_set:
+        st.error("⚠️ `GOOGLE_API_KEY` is missing! Configure it in `.streamlit/secrets.toml` or Cloud Secrets.")
 
     if st.button("🗑️ Reset Session & Memory"):
         st.session_state.clear()
@@ -69,9 +82,11 @@ for message in st.session_state.messages:
                 st.text(message["evidence"])
 
 # 2. Listen for new chat inputs
-if prompt := st.chat_input("Ask a question or follow-up about the resume..."):
+if prompt := st.chat_input("Ask a question or follow-up about the document..."):
     if "vector_db" not in st.session_state:
         st.warning("⚠️ Please upload a PDF document first.")
+    elif not api_key_set:
+        st.error("❌ Cannot process query: `GOOGLE_API_KEY` is not set.")
     else:
         # Display user message immediately
         st.session_state.messages.append({"role": "user", "content": prompt})
