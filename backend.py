@@ -10,7 +10,7 @@ from langchain_core.output_parsers import StrOutputParser
 # ==========================================
 # CONFIGURATION
 # ==========================================
-LLM_MODEL_NAME = "gemini-1.5-flash"
+LLM_MODEL_NAME = "gemini-3.5-flash"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 
 def create_in_memory_vector_db(file_path: str):
@@ -69,7 +69,10 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
         return f"⚠️ **Grounded Analytics Aborted:** {retrieved_chunks}"
 
     # Initialize Gemini model (temperature set low for accurate factual retrieval)
-    llm = ChatGoogleGenerativeAI(model=LLM_MODEL_NAME, temperature=0.2)
+    llm = ChatGoogleGenerativeAI(
+    model="gemini-3.5-flash",
+    temperature=0
+)
 
     # Format the last 4 messages of conversation history to prevent context window overflow
     history_str = "No previous conversation history."
