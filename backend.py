@@ -1,5 +1,6 @@
 import pypdf
 import chromadb
+import sentence_transformers
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
