@@ -2,7 +2,12 @@ import os
 import tempfile
 import streamlit as st
 from backend import create_in_memory_vector_db, retrieve_context_from_db, generate_rag_response
-
+# Initialize values in Session State
+if "active_file_name" not in st.session_state:
+    st.session_state.active_file_name = "None"
+    
+if "preview_text" not in st.session_state:
+    st.session_state.preview_text = "No preview available."
 st.set_page_config(page_title="RAG Document Assistant", layout="wide")
 st.title("📚 Local RAG Document Assistant")
 
@@ -59,7 +64,7 @@ if uploaded_file is not None:
                 if os.path.exists(tmp_file_path):
                     os.remove(tmp_file_path)
     
-    st.sidebar.info(f"⚡ Active Document: **{st.session_state.active_file_name}**")
+    st.sidebar.info(f"⚡ Active Document: **{st.session_state.get('active_file_name', 'None')}**")
     with st.expander("📄 Extracted Text Sample (Sanity Check)"):
         st.write(st.session_state.get("preview_text", "No preview available."))
 else:

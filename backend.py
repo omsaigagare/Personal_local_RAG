@@ -1,10 +1,8 @@
 import pypdf
 import chromadb
-import sentence_transformers
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -12,7 +10,8 @@ from langchain_core.output_parsers import StrOutputParser
 # CONFIGURATION
 # ==========================================
 LLM_MODEL_NAME = "gemini-3.5-flash"
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+# Switched to Google's lightweight embedding API to avoid PyTorch OOM crashes
+EMBEDDING_MODEL_NAME = "models/gemini-embedding-001" 
 
 def create_in_memory_vector_db(file_path: str):
     """
@@ -31,7 +30,8 @@ def create_in_memory_vector_db(file_path: str):
     chunks = text_splitter.split_text(raw_text)
 
     # 3. Create Ephemeral (RAM-Only) Chroma Client
-    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    # Now routing embeddings through the Gemini API instead of processing locally
+    embedding_model = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL_NAME)
     ephemeral_client = chromadb.EphemeralClient()
     
     vector_db = Chroma(
@@ -71,9 +71,9 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
 
     # Initialize Gemini model (temperature set low for accurate factual retrieval)
     llm = ChatGoogleGenerativeAI(
-    model="gemini-3.5-flash",
-    temperature=0
-)
+        model=LLM_MODEL_NAME,
+        temperature=0
+    )
 
     # Format the last 4 messages of conversation history to prevent context window overflow
     history_str = "No previous conversation history."

@@ -1,5 +1,6 @@
 streamlit
 chromadb
-google-generativeai
-sentence-transformers
+langchain
+langchain-chroma
+langchain-google-genai
 pypdf
