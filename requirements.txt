@@ -2,5 +2,6 @@ streamlit
 chromadb
 langchain
 langchain-chroma
-langchain-google-genai
+langchain-cohere
+langchain-groq
 pypdf
