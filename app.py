@@ -16,9 +16,9 @@ st.title("📚 Local RAG Document Assistant")
 # ==========================================
 # Verify API Key availability before proceeding
 api_key_set = False
-if "DEEPSEEK_API_KEY" in os.environ:
+if "COHERE_API_KEY" in os.environ:
     api_key_set = True
-elif hasattr(st, "secrets") and "DEEPSEEK_API_KEY" in st.secrets:
+elif hasattr(st, "secrets") and "COHERE_API_KEY" in st.secrets:
     api_key_set = True
 
 # ==========================================
@@ -29,7 +29,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload document (PDF)", type=["pdf"])
 
     if not api_key_set:
-        st.error("⚠️ `DEEPSEEK_API_KEY` is missing! Configure it in `.streamlit/secrets.toml` or Cloud Secrets.")
+        st.error("⚠️ `COHERE_API_KEY` is missing! Configure it in `.streamlit/secrets.toml` or Cloud Secrets.")
 
     if st.button("🗑️ Reset Session & Memory"):
         st.session_state.clear()
@@ -91,7 +91,7 @@ if prompt := st.chat_input("Ask a question or follow-up about the document..."):
     if "vector_db" not in st.session_state:
         st.warning("⚠️ Please upload a PDF document first.")
     elif not api_key_set:
-        st.error("❌ Cannot process query: `DEEPSEEK_API_KEY` is not set.")
+        st.error("❌ Cannot process query: `COHERE_API_KEY` is not set.")
     else:
         # Display user message immediately
         st.session_state.messages.append({"role": "user", "content": prompt})
