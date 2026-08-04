@@ -1,17 +1,18 @@
 import pypdf
 import chromadb
+import streamlit as st
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
-LLM_MODEL_NAME = "gemini-3.5-flash"
-# Switched to Google's lightweight embedding API to avoid PyTorch OOM crashes
-EMBEDDING_MODEL_NAME = "models/gemini-embedding-001" 
+# Remote Hugging Face Model via API - Free, serverless, no local PyTorch
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2" 
 
 def create_in_memory_vector_db(file_path: str):
     """
@@ -30,8 +31,11 @@ def create_in_memory_vector_db(file_path: str):
     chunks = text_splitter.split_text(raw_text)
 
     # 3. Create Ephemeral (RAM-Only) Chroma Client
-    # Now routing embeddings through the Gemini API instead of processing locally
-    embedding_model = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL_NAME)
+    # Replaced Google API with Hugging Face Serverless API
+    embedding_model = HuggingFaceEndpointEmbeddings(
+        model=EMBEDDING_MODEL_NAME,
+        huggingfacehub_api_token=st.secrets["HF_TOKEN"]
+    )
     ephemeral_client = chromadb.EphemeralClient()
     
     vector_db = Chroma(
@@ -69,9 +73,11 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
     if "No relevant context chunks found" in retrieved_chunks or "⚠️ No active document" in retrieved_chunks:
         return f"⚠️ **Grounded Analytics Aborted:** {retrieved_chunks}"
 
-    # Initialize Gemini model (temperature set low for accurate factual retrieval)
-    llm = ChatGoogleGenerativeAI(
-        model=LLM_MODEL_NAME,
+    # Replaced Gemini with DeepSeek using OpenAI Wrapper
+    llm = ChatOpenAI(
+        api_key=st.secrets["DEEPSEEK_API_KEY"], 
+        base_url="https://api.deepseek.com",
+        model="deepseek-chat",
         temperature=0
     )
 
@@ -96,6 +102,5 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
         ("human", "{input}")
     ])
 
-    # Chain now includes StrOutputParser to return raw text string instead of AIMessage object
     chain = prompt_template | llm | StrOutputParser()
     return chain.invoke({"context": retrieved_chunks, "history": history_str, "input": query})
