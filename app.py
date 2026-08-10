@@ -16,9 +16,9 @@ st.title("📚 Local RAG Document Assistant")
 # ==========================================
 # Verify API Key availability before proceeding
 api_key_set = False
-if "COHERE_API_KEY" in os.environ:
+if "HF_TOKEN" in os.environ:
     api_key_set = True
-elif hasattr(st, "secrets") and "COHERE_API_KEY" in st.secrets:
+elif hasattr(st, "secrets") and "HF_TOKEN" in st.secrets:
     api_key_set = True
 
 # ==========================================
@@ -29,7 +29,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload document (PDF)", type=["pdf"])
 
     if not api_key_set:
-        st.error("⚠️ `COHERE_API_KEY` is missing! Configure it in `.streamlit/secrets.toml` or Cloud Secrets.")
+        st.error("⚠️ `HF_TOKEN` is missing! Configure it in `.streamlit/secrets.toml` or Cloud Secrets.")
 
     if st.button("🗑️ Reset Session & Memory"):
         st.session_state.clear()

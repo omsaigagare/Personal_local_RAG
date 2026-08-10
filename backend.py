@@ -52,7 +52,7 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
 
     # Using Groq's Llama 3 for fast, free inference
     llm = ChatGroq(
-        api_key=st.secrets["COHERE_API_KEY"],
+        api_key=st.secrets["GROQ_API_KEY"],
         model_name="llama-3.1-8b-instant",
         temperature=0
     )
