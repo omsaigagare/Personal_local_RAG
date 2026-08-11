@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Analyzer AI - RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8e9ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .file-info {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .file-info h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .preview-text {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12px;
+            color: #666;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .settings {
+            margin-top: auto;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .setting-group input[type="range"] {
+            width: 100%;
+        }
+
+        .setting-value {
+            font-size: 12px;
+            color: #667eea;
+            float: right;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 20px 25px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .status-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: #f0f2f5;
+            color: #333;
+        }
+
+        .message-role {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .context-badge {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid #667eea;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #667eea;
+        }
+
+        .chat-input-area {
+            padding: 20px 25px;
+            border-top: 2px solid #f0f0f0;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+            font-family: inherit;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            font-size: 18px;
+        }
+
+        .send-button:hover {
+            transform: scale(1.1);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .example-queries {
+            padding: 15px 25px;
+            background: #f8f9ff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .example-query {
+            background: white;
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .example-query:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>📄 DocAnalyzer AI</h1>
+                <p>RAG-Powered Intelligence</p>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📤</div>
+                <div style="font-weight: 600; color: #333;">Upload PDF Document</div>
+                <div class="upload-text">Drag & drop or click to browse</div>
+                <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+            </div>
+
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <h3>📊 Document Stats</h3>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="chunkCount">0</div>
+                        <div>Chunks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="embedModel">Cohere</div>
+                        <div>Embeddings</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="llmModel">Llama 3</div>
+                        <div>LLM</div>
+                    </div>
+                </div>
+                <div class="preview-text" id="previewText">No document loaded...</div>
+            </div>
+
+            <div class="settings">
+                <h3 style="color: #333; margin-bottom: 15px;">⚙️ Settings</h3>
+                <div class="setting-group">
+                    <label>
+                        Top-K Chunks
+                        <span class="setting-value" id="topKValue">5</span>
+                    </label>
+                    <input type="range" id="topKSlider" min="1" max="10" value="5" step="1">
+                </div>
+                <div class="setting-group">
+                    <label>
+                        Relevance Threshold
+                        <span class="setting-value" id="thresholdValue">0.15</span>
+                    </label>
+                    <input type="range" id="thresholdSlider" min="0" max="1" value="0.15" step="0.05">
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-header">
+                <h2>💬 Document Q&A Session</h2>
+                <span class="status-badge status-inactive" id="statusBadge">No Document</span>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai-message">
+                    <div class="message-role">🤖 System</div>
+                    <div class="message-content">
+                        Welcome to DocAnalyzer AI! Upload a PDF document to get started. I can help you analyze, summarize, and answer questions about your document using advanced RAG technology.
+                    </div>
+                </div>
+            </div>
+
+            <div class="example-queries" id="exampleQueries">
+                <span style="font-size: 12px; color: #666; margin-right: 10px;">📌 Example queries:</span>
+                <button class="example-query" onclick="askExample('Summarize the main points')">Summarize</button>
+                <button class="example-query" onclick="askExample('What are the key findings?')">Key Findings</button>
+                <button class="example-query" onclick="askExample('List important statistics')">Statistics</button>
+                <button class="example-query" onclick="askExample('What are the conclusions?')">Conclusions</button>
+            </div>
+
+            <div class="chat-input-area">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Ask a question about your document..." 
+                    rows="1"
+                    onkeydown="handleKeyPress(event)"
+                ></textarea>
+                <button class="send-button" id="sendButton" onclick="sendMessage()" disabled>
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let isDocumentLoaded = false;
+        let chatHistory = [];
+        let currentFile = null;
+
+        // DOM Elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const statusBadge = document.getElementById('statusBadge');
+        const topKSlider = document.getElementById('topKSlider');
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        const topKValue = document.getElementById('topKValue');
+        const thresholdValue = document.getElementById('thresholdValue');
+
+        // Update slider values display
+        topKSlider.addEventListener('input', (e) => {
+            topKValue.textContent = e.target.value;
+        });
+
+        thresholdSlider.addEventListener('input', (e) => {
+            thresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        async function handleFileUpload(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                alert('Please upload a PDF file.');
+                return;
+            }
+
+            // Show loading state
+            uploadArea.innerHTML = '<div class="loading-spinner"></div><p>Processing PDF...</p>';
+            
+            // Simulate file processing (in production, this would call your backend API)
+            setTimeout(() => {
+                // Reset upload area
+                uploadArea.innerHTML = `
+                    <div class="upload-icon">📄</div>
+                    <div style="font-weight: 600; color: #333;">${file.name}</div>
+                    <div class="upload-text">Click to change document</div>
+                `;
+
+                // Update file info
+                fileInfo.style.display = 'block';
+                document.getElementById('chunkCount').textContent = '24';
+                document.getElementById('previewText').textContent = 'Document loaded successfully. Ready for analysis...';
+
+                // Update status
+                isDocumentLoaded = true;
+                statusBadge.textContent = 'Document Active';
+                statusBadge.className = 'status-badge status-active';
+                sendButton.disabled = false;
+
+                // Add system message
+                addMessage('🤖 System', `✅ Document "${file.name}" loaded successfully! You can now ask questions about its content.`, 'ai-message');
+            }, 1500);
+        }
+
+        // Chat functionality
+        function sendMessage() {
+            const query = chatInput.value.trim();
+            if (!query || !isDocumentLoaded) return;
+
+            // Add user message
+            addMessage('👤 You', query, 'user-message');
+            
+            // Clear input
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+
+            // Show typing indicator
+            const typingId = showTypingIndicator();
+
+            // Simulate AI response (in production, this would call your /generate_rag_response endpoint)
+            setTimeout(() => {
+                removeTypingIndicator(typingId);
+                
+                const response = generateMockResponse(query);
+                addMessage('🤖 DocAnalyzer', response, 'ai-message');
+                
+                // Update chat history
+                chatHistory.push(
+                    { role: 'user', content: query },
+                    { role: 'assistant', content: response }
+                );
+            }, 2000);
+        }
+
+        function generateMockResponse(query) {
+            // Mock responses based on query keywords
+            const lowerQuery = query.toLowerCase();
+            
+            if (lowerQuery.includes('summarize') || lowerQuery.includes('summary')) {
+                return `Based on the document analysis:\n\n• The document outlines a comprehensive strategy for digital transformation\n• Key focus areas include AI integration and process automation\n• Implementation timeline spans 18-24 months\n• Expected ROI improvement of 35% within first year\n\nThese findings are supported by data across multiple chapters.`;
+            } else if (lowerQuery.includes('findings') || lowerQuery.includes('key')) {
+                return `Key findings from the document:\n\n1. **Market Growth**: 28% year-over-year increase\n2. **Customer Satisfaction**: Improved from 72% to 89%\n3. **Operational Efficiency**: 45% reduction in processing time\n4. **Cost Savings**: $2.3M annual savings identified\n\nAll figures are referenced from the executive summary and financial analysis sections.`;
+            } else {
+                return `Here's what the document reveals about "${query}":\n\n📊 **Relevant Context**:\n• The document addresses this topic in Section 3.2\n• Multiple supporting data points are available\n• Key stakeholders mentioned: Product Team, Engineering, and Operations\n\n💡 **Analysis**: Based on the evidence, there's significant alignment with the overall strategy outlined in the document.`;
+            }
+        }
+
+        function addMessage(role, content, className) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.innerHTML = `
+                <div class="message-role">${role}</div>
+                <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const id = 'typing-' + Date.now();
+            const typingDiv = document.createElement('div');
+            typingDiv.id = id;
+            typingDiv.className = 'message ai-message';
+            typingDiv.innerHTML = `
+                <div class="message-role">🤖 DocAnalyzer</div>
+                <div class="message-content"><div class="loading-spinner"></div> Analyzing document...</div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return id;
+        }
+
+        function removeTypingIndicator(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.remove();
+            }
+        }
+
+        function askExample(query) {
+            chatInput.value = query;
+            sendMessage();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+    </script>
+</body>
+</html>

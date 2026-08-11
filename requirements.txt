@@ -1,7 +1,10 @@
-streamlit
+fastapi
+uvicorn
+python-multipart
+pypdf
 chromadb
-langchain
+langchain-text-splitters
 langchain-chroma
 langchain-cohere
 langchain-groq
-pypdf
+langchain-core
