@@ -14,7 +14,7 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            min-height: 100vh;  
             padding: 20px;
         }
 
@@ -459,11 +459,11 @@
         </div>
     </div>
 
-    <script>
+ <script>
         // State management
+        const API_BASE_URL = "https://personal-local-rag.onrender.com";
         let isDocumentLoaded = false;
         let chatHistory = [];
-        let currentFile = null;
 
         // DOM Elements
         const uploadArea = document.getElementById('uploadArea');
@@ -479,13 +479,8 @@
         const thresholdValue = document.getElementById('thresholdValue');
 
         // Update slider values display
-        topKSlider.addEventListener('input', (e) => {
-            topKValue.textContent = e.target.value;
-        });
-
-        thresholdSlider.addEventListener('input', (e) => {
-            thresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
-        });
+        topKSlider.addEventListener('input', (e) => topKValue.textContent = e.target.value);
+        thresholdSlider.addEventListener('input', (e) => thresholdValue.textContent = parseFloat(e.target.value).toFixed(2));
 
         // File upload handling
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -495,16 +490,13 @@
             uploadArea.classList.add('dragover');
         });
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
 
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileUpload(files[0]);
+            if (e.dataTransfer.files.length > 0) {
+                handleFileUpload(e.dataTransfer.files[0]);
             }
         });
 
@@ -521,21 +513,36 @@
             }
 
             // Show loading state
-            uploadArea.innerHTML = '<div class="loading-spinner"></div><p>Processing PDF...</p>';
+            uploadArea.innerHTML = '<div class="loading-spinner"></div><p style="margin-top: 10px;">Uploading to Render Backend...</p>';
             
-            // Simulate file processing (in production, this would call your backend API)
-            setTimeout(() => {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                // REAL API CALL TO YOUR BACKEND
+                const response = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || "Upload failed");
+                }
+
+                const data = await response.json();
+
                 // Reset upload area
                 uploadArea.innerHTML = `
                     <div class="upload-icon">📄</div>
-                    <div style="font-weight: 600; color: #333;">${file.name}</div>
+                    <div style="font-weight: 600; color: #333;">${data.filename}</div>
                     <div class="upload-text">Click to change document</div>
                 `;
 
-                // Update file info
+                // Update file info with actual data from backend
                 fileInfo.style.display = 'block';
-                document.getElementById('chunkCount').textContent = '24';
-                document.getElementById('previewText').textContent = 'Document loaded successfully. Ready for analysis...';
+                document.getElementById('chunkCount').textContent = data.chunks_created;
+                document.getElementById('previewText').textContent = data.preview + "...";
 
                 // Update status
                 isDocumentLoaded = true;
@@ -543,51 +550,63 @@
                 statusBadge.className = 'status-badge status-active';
                 sendButton.disabled = false;
 
-                // Add system message
-                addMessage('🤖 System', `✅ Document "${file.name}" loaded successfully! You can now ask questions about its content.`, 'ai-message');
-            }, 1500);
+                addMessage('🤖 System', `✅ Document "${data.filename}" vectorized successfully into ${data.chunks_created} chunks! You can now ask questions.`, 'ai-message');
+                
+            } catch (error) {
+                console.error("Upload error:", error);
+                uploadArea.innerHTML = `
+                    <div class="upload-icon" style="color: red;">❌</div>
+                    <div style="font-weight: 600; color: red;">Upload Failed</div>
+                    <div class="upload-text">${error.message}</div>
+                `;
+            }
         }
 
         // Chat functionality
-        function sendMessage() {
+        async function sendMessage() {
             const query = chatInput.value.trim();
             if (!query || !isDocumentLoaded) return;
 
-            // Add user message
             addMessage('👤 You', query, 'user-message');
             
-            // Clear input
             chatInput.value = '';
             chatInput.style.height = 'auto';
 
-            // Show typing indicator
             const typingId = showTypingIndicator();
 
-            // Simulate AI response (in production, this would call your /generate_rag_response endpoint)
-            setTimeout(() => {
+            try {
+                // REAL API CALL TO YOUR BACKEND
+                const response = await fetch(`${API_BASE_URL}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query: query,
+                        chat_history: chatHistory 
+                    })
+                });
+
                 removeTypingIndicator(typingId);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || "Query failed");
+                }
+
+                const data = await response.json();
                 
-                const response = generateMockResponse(query);
-                addMessage('🤖 DocAnalyzer', response, 'ai-message');
+                // Add the AI response and the context chunks it used
+                addMessage('🤖 DocAnalyzer', data.answer, 'ai-message');
                 
-                // Update chat history
+                // Keep track of conversation
                 chatHistory.push(
                     { role: 'user', content: query },
-                    { role: 'assistant', content: response }
+                    { role: 'assistant', content: data.answer }
                 );
-            }, 2000);
-        }
 
-        function generateMockResponse(query) {
-            // Mock responses based on query keywords
-            const lowerQuery = query.toLowerCase();
-            
-            if (lowerQuery.includes('summarize') || lowerQuery.includes('summary')) {
-                return `Based on the document analysis:\n\n• The document outlines a comprehensive strategy for digital transformation\n• Key focus areas include AI integration and process automation\n• Implementation timeline spans 18-24 months\n• Expected ROI improvement of 35% within first year\n\nThese findings are supported by data across multiple chapters.`;
-            } else if (lowerQuery.includes('findings') || lowerQuery.includes('key')) {
-                return `Key findings from the document:\n\n1. **Market Growth**: 28% year-over-year increase\n2. **Customer Satisfaction**: Improved from 72% to 89%\n3. **Operational Efficiency**: 45% reduction in processing time\n4. **Cost Savings**: $2.3M annual savings identified\n\nAll figures are referenced from the executive summary and financial analysis sections.`;
-            } else {
-                return `Here's what the document reveals about "${query}":\n\n📊 **Relevant Context**:\n• The document addresses this topic in Section 3.2\n• Multiple supporting data points are available\n• Key stakeholders mentioned: Product Team, Engineering, and Operations\n\n💡 **Analysis**: Based on the evidence, there's significant alignment with the overall strategy outlined in the document.`;
+            } catch (error) {
+                removeTypingIndicator(typingId);
+                console.error("Query error:", error);
+                addMessage('🤖 System Error', `Connection failed: ${error.message}`, 'ai-message');
             }
         }
 
@@ -609,7 +628,7 @@
             typingDiv.className = 'message ai-message';
             typingDiv.innerHTML = `
                 <div class="message-role">🤖 DocAnalyzer</div>
-                <div class="message-content"><div class="loading-spinner"></div> Analyzing document...</div>
+                <div class="message-content"><div class="loading-spinner"></div> Analyzing document via Render...</div>
             `;
             chatMessages.appendChild(typingDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -618,9 +637,7 @@
 
         function removeTypingIndicator(id) {
             const element = document.getElementById(id);
-            if (element) {
-                element.remove();
-            }
+            if (element) element.remove();
         }
 
         function askExample(query) {
@@ -635,7 +652,6 @@
             }
         }
 
-        // Auto-resize textarea
         chatInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 100) + 'px';
