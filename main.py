@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 import os
 import pypdf
 import chromadb
@@ -10,6 +11,8 @@ from langchain_cohere import CohereEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+class QueryRequest(BaseModel):
+    question: str
 
 # Load local environment variables from .env
 load_dotenv()
@@ -72,13 +75,22 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from pydantic import BaseModel
+
+# Define the JSON structure FastAPI should expect
+class QueryRequest(BaseModel):
+    question: str
+
 @app.post("/query")
-async def query_document(question: str = Form(...)):
+async def query_document(request: QueryRequest):
     global current_vector_db
     if current_vector_db is None:
         raise HTTPException(status_code=400, detail="No active document loaded in memory. Upload a PDF first.")
 
     try:
+        # Extract the question from the validated JSON request
+        question = request.question
+        
         results = current_vector_db.similarity_search_with_relevance_scores(question, k=5)
         valid_chunks = [f"[Chunk {idx} | Relevance: {score:.2f}]\n{doc.page_content.strip()}" for idx, (doc, score) in enumerate(results, 1) if score >= 0.15]
 
@@ -92,6 +104,8 @@ async def query_document(question: str = Form(...)):
             model="gemini-2.5-flash",
             temperature=0
         )
+        
+        # ... (keep the rest of your LLM execution code below here exactly as it was) ...
 
         system_rules = (
            "You are an expert analytical document evaluator.\n"
