@@ -1,12 +1,22 @@
+import os
 import pypdf
 import chromadb
-import streamlit as st
+from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_cohere import CohereEmbeddings
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
+# Load local environment variables
+load_dotenv()
+
+def get_api_key(env_var: str) -> str:
+    key = os.getenv(env_var)
+    if not key:
+        raise ValueError(f"Server Error: {env_var} environment variable is missing.")
+    return key
 
 def create_in_memory_vector_db(file_path: str):
     reader = pypdf.PdfReader(file_path)
@@ -15,10 +25,10 @@ def create_in_memory_vector_db(file_path: str):
     if not raw_text.strip():
         raise ValueError("❌ OCR Required: The uploaded PDF contains no selectable text.")
 
-    # Using Cohere for high-quality, free embeddings
+    # Swapped st.secrets for standard os.getenv
     embedding_model = CohereEmbeddings(
         model="embed-english-v3.0",
-        cohere_api_key=st.secrets["COHERE_API_KEY"]
+        cohere_api_key=get_api_key("COHERE_API_KEY")
     )
     
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -27,7 +37,7 @@ def create_in_memory_vector_db(file_path: str):
     ephemeral_client = chromadb.EphemeralClient()
     vector_db = Chroma(
         client=ephemeral_client,
-        collection_name="active_resume",
+        collection_name="active_document",
         embedding_function=embedding_model,
         collection_metadata={"hnsw:space": "cosine"}
     )
@@ -50,10 +60,10 @@ def generate_rag_response(query: str, retrieved_chunks: str, chat_history: list 
     if "No relevant context chunks found" in retrieved_chunks or "⚠️ No active document" in retrieved_chunks:
         return f"⚠️ **Grounded Analytics Aborted:** {retrieved_chunks}"
 
-    # Using Groq's Llama 3 for fast, free inference
-    llm = ChatGroq(
-        api_key=st.secrets["GROQ_API_KEY"],
-        model_name="llama-3.1-8b-instant",
+    # Swapped Groq for Gemini
+    llm = ChatGoogleGenerativeAI(
+        google_api_key=get_api_key("GOOGLE_API_KEY"),
+        model="gemini-2.5-flash",
         temperature=0
     )
 
