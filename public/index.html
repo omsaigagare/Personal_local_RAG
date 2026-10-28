@@ -577,7 +577,7 @@ try {
                 // TYPE THIS LINE MANUALLY RIGHT HERE, BEFORE THE FETCH:
                 const cleanQuery = query.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
                 
-                const response = await fetch('https://personal-local-rag.onrender.com/query', {
+                const response = await fetch(`${API_BASE_URL}/query`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
