@@ -394,7 +394,7 @@
                         <div>Embeddings</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-value" id="llmModel">Llama 3</div>
+                        <div class="stat-value" id="llmModel">GEMINI SS</div>
                         <div>LLM</div>
                     </div>
                 </div>
@@ -573,40 +573,36 @@
             chatInput.style.height = 'auto';
 
             const typingId = showTypingIndicator();
-
-            try {
-                // REAL API CALL TO YOUR BACKEND
-                const response = await fetch(`${API_BASE_URL}/query`, {
+try {
+                // TYPE THIS LINE MANUALLY RIGHT HERE, BEFORE THE FETCH:
+                const cleanQuery = query.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+                
+                const response = await fetch('https://personal-local-rag.onrender.com/query', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        query: query,
-                        chat_history: chatHistory 
-                    })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // REPLACE YOUR OLD BODY LINE WITH THIS ONE:
+                    body: JSON.stringify({ question: cleanQuery }) 
                 });
-
-                removeTypingIndicator(typingId);
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || "Query failed");
-                }
 
                 const data = await response.json();
                 
-                // Add the AI response and the context chunks it used
-                addMessage('🤖 DocAnalyzer', data.answer, 'ai-message');
-                
-                // Keep track of conversation
-                chatHistory.push(
-                    { role: 'user', content: query },
-                    { role: 'assistant', content: data.answer }
-                );
+                // Remove typing indicator - modify this line if your code does this differently
+                const typingElement = document.getElementById(typingId);
+                if (typingElement) typingElement.remove();
 
+                if (response.ok) {
+                    // Check your Python code: If it returns {"result": "text"}, change data.answer to data.result
+                    addMessage('🤖 AI', data.answer, 'bot-message');
+                } else {
+                    addMessage('⚠️ Error', `Server rejected request: ${JSON.stringify(data.detail)}`, 'error-message');
+                }
             } catch (error) {
-                removeTypingIndicator(typingId);
-                console.error("Query error:", error);
-                addMessage('🤖 System Error', `Connection failed: ${error.message}`, 'ai-message');
+                const typingElement = document.getElementById(typingId);
+                if (typingElement) typingElement.remove();
+                
+                addMessage('⚠️ Error', `Connection failed: ${error.message}`, 'error-message');
             }
         }
 

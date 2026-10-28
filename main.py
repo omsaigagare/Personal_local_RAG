@@ -101,10 +101,10 @@ async def query_document(request: QueryRequest):
             return {"answer": "I could not find relevant information in the document to answer your question."}
 
         llm = ChatGoogleGenerativeAI(
-            google_api_key=get_api_key("GOOGLE_API_KEY"),
-            model="gemini-2.5-flash",
-            temperature=0
-        )
+    google_api_key=get_api_key("GEMINI_API_KEY"),
+    model="gemini-2.5-flash",
+    temperature=0
+)
         
         # ... (keep the rest of your LLM execution code below here exactly as it was) ...
 
